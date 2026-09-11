@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>라인별 전력 배부 계산</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-mark">POWER<br><span>ALLOCATOR</span></div>
+    <div class="header-title">
+      <p class="eyebrow">ENERGY MANAGEMENT WORKSPACE</p>
+        <h1>생산제품 전력 Utility 사용 분석</h1>
+      <p>가동기간과 생산량을 입력하면 라인별 전력량과 전력 원단위를 계산합니다.</p>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="intro-row">
+      <div>
+        <span class="quote-mark">“</span>
+        <h2>생산 조건 기반으로,<br><mark>제품 생산에 사용되는 전력량</mark>을 확인하세요”</h2>
+        <p class="muted">공무동은 4개 Class, 소성로는 3개 Class로 구분해 2차 Polynomial Feature + Logistic Regression 분류모델의 대표 중앙값을 적용합니다.</p>
+      </div>
+      <div class="period-card">
+        <label for="monthPicker">산정 대상 월</label>
+        <input type="month" id="monthPicker" value="2026-07" />
+        <span id="seasonBadge" class="season-badge">여름</span>
+      </div>
+    </section>
+
+    <nav class="mode-tabs" aria-label="입력 항목 선택">
+      <button class="mode-tab active" data-tab-switch="production">생산기간·열처리 생산량</button>
+      <button class="mode-tab" data-tab-switch="admin">관리자 설정</button>
+    </nav>
+
+    <section class="panel line-panel" id="lineSetupPanel" data-tab-content="production">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">01 · LINE SETUP</span>
+          <h3>라인 운전 설정</h3>
+        </div>
+        <p>가동 라인만 선택하세요. CFA·CDA 유량은 Nm³/hr 기준으로 입력합니다.</p>
+      </div>
+      <div id="lineGrid" class="line-grid"></div>
+    </section>
+
+    <section class="panel input-panel" id="productionInputPanel" data-tab-content="production">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">02 · PRODUCTION INPUT</span>
+          <h3>생산기간 및 열처리 생산량 입력</h3>
+        </div>
+        <p>라인별 카드에서 열처리 배출기간과 실제 열처리 생산량을 입력합니다. 전력 발생일은 공정별 소요일수를 반영해 역산합니다.</p>
+      </div>
+      <div id="productionCards" class="production-line-grid"></div>
+      <datalist id="productOptions">
+        <option value="N87(대)"></option>
+        <option value="N86(대)"></option>
+        <option value="NCA"></option>
+        <option value="N86(단)"></option>
+      </datalist>
+      <p class="helper-text">열처리 배출일을 기준으로 예비소성 D-3일, 본소성 D-2일, 수세·열처리 D-1일부터 전력을 계산합니다.</p>
+    </section>
+
+    <section class="panel condition-panel" data-tab-content="production">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">03 · PROCESS CONDITIONS</span>
+          <h3>공정 운전조건</h3>
+        </div>
+        <p>상단·중단·하단 충진량을 입력하면 평균 충진량이 자동 계산됩니다. 배기팬 설정값은 자동 적용됩니다.</p>
+      </div>
+      <div id="conditionCards" class="condition-cards"></div>
+    </section>
+
+    <section class="results-section">
+      <div class="bottom-actions">
+        <button class="ghost-button" id="resetBtn">입력 초기화</button>
+        <button class="primary-button" id="calculateBtn">▶ 결과 조회</button>
+      </div>
+      <div class="section-heading result-heading">
+        <div>
+          <span class="section-kicker">04 · CALCULATION RESULT</span>
+          <h3>전력 산정 결과</h3>
+        </div>
+        <div class="result-actions"><span id="calculationStatus" class="status-pill">입력 후 결과 조회 필요</span><button class="secondary-button" id="downloadBtn">Excel 내보내기</button></div>
+      </div>
+      <div id="kpiGrid" class="kpi-grid"></div>
+      <div class="panel composition-panel"><div class="chart-title"><h4>총 전력 구성비</h4><span>설비 직접전력과 공무동(유틸동) 전력 비교</span></div><div id="powerComposition" class="power-composition"></div></div>
+      <div class="result-grid">
+      <div class="panel chart-panel"><div class="chart-title"><h4>라인별 총 전력 구성비</h4><span>로 전력·外 설비·공무동(유틸동) 전력 합계</span></div><div id="donutChart" class="donut-wrap"></div></div>
+        <div class="panel chart-panel"><div class="chart-title"><h4>제품별 전력 원단위</h4><span>생산량 1kg당 전력사용량 · kWh/kg</span></div><div id="barChart" class="bar-chart"></div></div>
+      </div>
+      <div class="panel output-panel"><div class="chart-title"><h4>제품·라인별 전력 산정 내역</h4><span>전력량 단위: kWh</span></div><div class="table-wrap"><table class="result-table"><thead><tr><th>라인</th><th>제품</th><th>열처리 생산량 (kg)</th><th>로 전력</th><th>外 설비(집진기 포함)</th><th>공무동(유틸동) 전력</th><th>총 전력</th><th>원단위</th></tr></thead><tbody id="resultBody"></tbody></table></div></div>
+    </section>
+
+    <section class="panel admin-panel" data-tab-content="admin">
+      <div class="section-heading">
+        <div><span class="section-kicker">ADMIN SETTINGS</span><h3>제품별 공정조건 관리</h3></div>
+        <p>제품 기본값을 수정하면 이후 제품 선택 시 해당 조건이 자동 적용됩니다.</p>
+      </div>
+      <div id="productSettings" class="product-settings-grid"></div>
+      <details class="admin-subpanel">
+        <summary>모델 대표 중앙값 설정</summary>
+        <p class="muted">분류모델의 대표 중앙값을 수정할 수 있습니다. 변경한 값은 현재 브라우저에 저장됩니다.</p>
+        <div id="modelSettings" class="settings-grid"></div>
+      </details>
+    </section>
+  </main>
+  <footer><span>라인별 전력 배부 및 원단위 산정</span><span>브라우저 로컬 저장 · kWh/kg</span></footer>
+  <script src="model_bundle.js"></script>
+  <script src="utility_model_bundle_v4.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
